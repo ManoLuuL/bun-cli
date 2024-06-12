@@ -1,0 +1,13 @@
+{
+  "name": "cli",
+  "main": "bin/index.js",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "bin": {
+    "mycli": "./bin/index.js"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "project-cli",
+  "module": "bin/index.ts",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "bin": {
+    "projcli": "./bin/index.js"
+  }
+}
