@@ -1,6 +1,6 @@
 {
-  "name": "cli",
-  "main": "bin/index.js",
+  "name": "mycli",
+  "main": "bin/index.ts",
   "devDependencies": {
     "@types/bun": "latest"
   },
@@ -8,6 +8,9 @@
     "typescript": "^5.0.0"
   },
   "bin": {
-    "mycli": "./bin/index.js"
+    "mycli": "./bin/index.ts"
+  },
+  "scripts": {
+    "start": "bun run ./bin/index.ts"
   }
 }
