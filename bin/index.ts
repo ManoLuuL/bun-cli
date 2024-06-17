@@ -8,85 +8,9 @@ import { colors } from "./colors";
 import { logDB } from "./db";
 import { parseArgs } from "util";
 
-const { insertData, db } = logDB();
-const dataRun = new Date().toString();
-const frameworks = ["angular", "react", "vue"];
-const languages = ["javascript", "typescript"];
+let selectedIndex = 0;
 
-// frameworks mais usados -> 1: React (29) \n 2: Angular (2) \n 3: Vue (0)
-// linguages mais usadas -> 1: TS (10) \n 2: JS (0)
-// HORA do dia onde mais clona -> 15h
-
-const { values } = parseArgs({
-  args: Bun.argv,
-  options: {
-    report: {
-      type: "boolean",
-    },
-  },
-  allowPositionals: true,
-});
-
-if (values.report) {
-  const query = db.query<Data, []>("select * from mytable");
-  const allData = query.all();
-
-  // InitialValues report
-  const initialValueFramework = {} as ConuntItemsReturn;
-  const initialValueLanguage = {} as ConuntItemsReturn;
-  const initialValueHours = {} as ConuntItemsReturn;
-
-  const countItems = (
-    items: Data[],
-    key: keyof Data,
-    initialValue: ConuntItemsReturn,
-    list?: string[]
-  ) => {
-    return items.reduce((acc, item) => {
-      const value = item[key];
-
-      if (list && list.includes(value)) {
-        acc[value] = (acc[value] || 0) + 1;
-      } else {
-        const data = new Date(value).getHours();
-        acc[data] = (acc[data] || 0) + 1;
-      }
-      return acc;
-    }, initialValue);
-  };
-
-  const frameworkCounts = countItems(
-    allData,
-    "framework",
-    initialValueFramework,
-    frameworks
-  );
-
-  const languageCounts = countItems(
-    allData,
-    "language",
-    initialValueHours,
-    languages
-  );
-
-  const hoursCounts = countItems(allData, "run_time", initialValueLanguage);
-  const mostExecutedHour = Object.keys(hoursCounts).reduce((a, b) =>
-    hoursCounts[a] > hoursCounts[b] ? a : b
-  );
-
-  console.log("Frameworks repetidos:");
-  console.table(frameworkCounts);
-  console.log("------------------------------------------");
-  console.log("Linguagens repetidas:");
-  console.table(languageCounts);
-
-  console.log("------------------------------------------");
-  console.log(`Horario de maior clonagem: ${mostExecutedHour}h`);
-
-  exit(1);
-}
-
-// #region Func
+// Função para ler dados de entrada
 async function readInputData(prompt: string): Promise<string> {
   console.write(prompt);
   for await (const line of console) {
@@ -95,46 +19,43 @@ async function readInputData(prompt: string): Promise<string> {
   return "";
 }
 
-let selectedIndex = 0;
-
+// Função para exibir o menu de opções
 function displayMenu(options: string[], prompt: string) {
   console.clear();
   console.log(prompt);
-
   options.forEach((option, index) => {
     const isSelected = index === selectedIndex;
     const arrow = isSelected ? `${colors.purple}->` : "  ";
-    let color;
-    switch (option) {
-      case "angular":
-        color = colors.red;
-        break;
-      case "react":
-        color = colors.blue;
-        break;
-      case "vue":
-        color = colors.green;
-        break;
-      case "javascript":
-        color = colors.yellow;
-        break;
-      case "typescript":
-        color = colors.blue;
-        break;
-      default:
-        color = colors.reset;
-    }
+    const color = getColor(option);
     const content = color + option.toUpperCase() + colors.reset;
     console.log(`${arrow} ${content}`);
   });
 }
 
+// Função para obter a cor com base na opção
+function getColor(option: string): string {
+  switch (option) {
+    case "angular":
+      return colors.red;
+    case "react":
+      return colors.blue;
+    case "vue":
+      return colors.green;
+    case "javascript":
+      return colors.yellow;
+    case "typescript":
+      return colors.blue;
+    default:
+      return colors.reset;
+  }
+}
+
+// Função para selecionar uma opção do menu
 async function selectOption(
   options: string[],
   prompt: string
 ): Promise<string> {
   selectedIndex = 0;
-
   return new Promise((resolve) => {
     const handleKey = (key: string) => {
       switch (key) {
@@ -159,7 +80,6 @@ async function selectOption(
       }
       displayMenu(options, prompt);
     };
-
     displayMenu(options, prompt);
     // Ativa modo bruto de leitura(caract. p caract.)
     stdin.setRawMode(true);
@@ -167,20 +87,124 @@ async function selectOption(
     stdin.resume();
     // define o tipo de codificacao dos dados lidos
     stdin.setEncoding("utf8");
-    // Cria o evento pelo tipo passado e o que ele tem que executar
+    // Cria o evento pelo tipo passado e o que ele tem que executars
     stdin.on("data", handleKey);
   });
 }
 
-// #endregion
+// Função para contar itens com base em uma chave específica
+function countItems(
+  items: Data[],
+  key: keyof Data,
+  initialValue: ConuntItemsReturn,
+  list?: string[]
+) {
+  return items.reduce((acc, item) => {
+    const value = item[key];
+    if (list && list.includes(value)) {
+      acc[value] = (acc[value] || 0) + 1;
+    } else if (key === "run_time") {
+      const data = new Date(value).getHours();
+      acc[data] = (acc[data] || 0) + 1;
+    }
+    return acc;
+  }, initialValue);
+}
+
+// Função para exibir relatório baseado na escolha do usuário
+function generateReport(reportSelected: string, allData: Data[]): void {
+  const initialValueFramework = {} as ConuntItemsReturn;
+  const initialValueLanguage = {} as ConuntItemsReturn;
+  const initialValueHours = {} as ConuntItemsReturn;
+
+  switch (reportSelected) {
+    case "framework":
+      console.log("Frameworks Repetidos:");
+      console.table(
+        countItems(allData, "framework", initialValueFramework, frameworks)
+      );
+      break;
+    case "linguagem":
+      console.log("Linguagens Repetidas:");
+      console.table(
+        countItems(allData, "language", initialValueLanguage, languages)
+      );
+      break;
+    case "hora":
+      console.log(
+        `Horario de Maior Clonagem: ${getBusiestHour(
+          allData,
+          initialValueHours
+        )}h`
+      );
+      break;
+    case "todos":
+      console.log("Frameworks Repetidos:");
+      console.table(
+        countItems(allData, "framework", initialValueFramework, frameworks)
+      );
+      console.log("------------------------------------------");
+      console.log("Linguagens Repetidas:");
+      console.table(
+        countItems(allData, "language", initialValueLanguage, languages)
+      );
+      console.log("------------------------------------------");
+      console.log(
+        `Horario de Maior Clonagem: ${getBusiestHour(
+          allData,
+          initialValueHours
+        )}h`
+      );
+      break;
+    default:
+      console.error("Opção de relatório inválida!");
+      exit(1);
+  }
+}
+
+// Função para obter a hora mais ocupada
+function getBusiestHour(
+  allData: Data[],
+  initialValue: ConuntItemsReturn
+): string {
+  const hoursCounts = countItems(allData, "run_time", initialValue);
+  return Object.keys(hoursCounts).reduce((a, b) =>
+    hoursCounts[a] > hoursCounts[b] ? a : b
+  );
+}
+
+// Configuração e execução principal
+const { insertData, db } = logDB();
+const dataRun = new Date().toString();
+const frameworks = ["angular", "react", "vue"];
+const languages = ["javascript", "typescript"];
+const reportOptions = ["framework", "linguagem", "hora", "todos"];
+
+const { values } = parseArgs({
+  args: Bun.argv,
+  options: {
+    report: {
+      type: "boolean",
+    },
+  },
+  allowPositionals: true,
+});
+
+if (values.report) {
+  const allData = db.query<Data, []>("select * from mytable").all();
+  const reportSelected = await selectOption(
+    reportOptions,
+    "Selecione um Tipo de Relatorio:"
+  );
+  generateReport(reportSelected, allData);
+  exit(1);
+}
 
 const folderName = await readInputData(`${colors.purple}Nome do Projeto: `);
-
 const selectedFramework = await selectOption(
   frameworks,
   "Selecione um Framework:"
 );
-
 const selectedLanguage = await selectOption(
   languages,
   `Selecione a Linguagem para o ${selectedFramework}:`
@@ -201,7 +225,6 @@ const destDir = `${cwd()}/${folderName}`;
 try {
   await $`mkdir -p ${destDir}`;
   await $`cp -r ${templateDir}/* ${destDir}/`;
-
   console.log(
     `${
       colors.green
