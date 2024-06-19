@@ -80,6 +80,7 @@ async function selectOption(
       }
       displayMenu(options, prompt);
     };
+
     displayMenu(options, prompt);
     // Ativa modo bruto de leitura(caract. p caract.)
     stdin.setRawMode(true);
@@ -87,7 +88,7 @@ async function selectOption(
     stdin.resume();
     // define o tipo de codificacao dos dados lidos
     stdin.setEncoding("utf8");
-    // Cria o evento pelo tipo passado e o que ele tem que executars
+    // Cria o evento pelo tipo passado e o que ele tem que executar
     stdin.on("data", handleKey);
   });
 }
@@ -99,16 +100,36 @@ function countItems(
   initialValue: ConuntItemsReturn,
   list?: string[]
 ) {
-  return items.reduce((acc, item) => {
+  const result = items.reduce((acc, item) => {
     const value = item[key];
+
     if (list && list.includes(value)) {
       acc[value] = (acc[value] || 0) + 1;
+      list.forEach((item) => {
+        if (!(item in acc)) {
+          acc[item] = 0;
+        }
+      });
     } else if (key === "run_time") {
       const data = new Date(value).getHours();
       acc[data] = (acc[data] || 0) + 1;
     }
+
     return acc;
   }, initialValue);
+
+  return result;
+}
+
+// Função para ordenar os resultados de forma decrescente
+function sortDescending(obj: ConuntItemsReturn) {
+  const initialValueSortedReduce = {} as ConuntItemsReturn;
+  return Object.keys(obj)
+    .sort((a, b) => obj[b] - obj[a])
+    .reduce((acc, key) => {
+      acc[key] = obj[key];
+      return acc;
+    }, initialValueSortedReduce);
 }
 
 // Função para exibir relatório baseado na escolha do usuário
@@ -120,14 +141,20 @@ function generateReport(reportSelected: string, allData: Data[]): void {
   switch (reportSelected) {
     case "framework":
       console.log("Frameworks Repetidos:");
+
       console.table(
-        countItems(allData, "framework", initialValueFramework, frameworks)
+        sortDescending(
+          countItems(allData, "framework", initialValueFramework, frameworks)
+        )
       );
+
       break;
     case "linguagem":
       console.log("Linguagens Repetidas:");
       console.table(
-        countItems(allData, "language", initialValueLanguage, languages)
+        sortDescending(
+          countItems(allData, "language", initialValueLanguage, languages)
+        )
       );
       break;
     case "hora":
@@ -141,12 +168,16 @@ function generateReport(reportSelected: string, allData: Data[]): void {
     case "todos":
       console.log("Frameworks Repetidos:");
       console.table(
-        countItems(allData, "framework", initialValueFramework, frameworks)
+        sortDescending(
+          countItems(allData, "framework", initialValueFramework, frameworks)
+        )
       );
       console.log("------------------------------------------");
       console.log("Linguagens Repetidas:");
       console.table(
-        countItems(allData, "language", initialValueLanguage, languages)
+        sortDescending(
+          countItems(allData, "language", initialValueLanguage, languages)
+        )
       );
       console.log("------------------------------------------");
       console.log(
@@ -162,7 +193,7 @@ function generateReport(reportSelected: string, allData: Data[]): void {
   }
 }
 
-// Função para obter a hora mais ocupada
+// Função para obter a hora mais executada
 function getBusiestHour(
   allData: Data[],
   initialValue: ConuntItemsReturn
@@ -197,7 +228,7 @@ if (values.report) {
     "Selecione um Tipo de Relatorio:"
   );
   generateReport(reportSelected, allData);
-  exit(1);
+  exit();
 }
 
 const folderName = await readInputData(`${colors.purple}Nome do Projeto: `);
